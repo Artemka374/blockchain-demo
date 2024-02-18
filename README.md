@@ -5,6 +5,7 @@
 * `/get_balance/{account_id}` - Returns balance of an account
 * `/get_transaction/{tx_hash}` - Returns transaction information by transaction hash
 * `/get_transactions/{account_id}` - Returns list of transactions for an account
+* `/get_nonce/{account_id}` - Returns current nonce for account
 * `/get_block_by_hash/{block_hash}` - Returns block information by block hash
 * `/get_block_by_id/{block_id}` - Returns block information by block id
 * `/get_proof/{tx_hash}` - Returns merkle proof for a transaction
@@ -12,7 +13,7 @@
 * `/block_height` - Returns current block height
 
 ## POST methods
-* `/transfer` - Transfers coins from one account to another.
+* `/transfer` - Transfers tokens from one account to another.
 
 Method data:
 ```json
@@ -39,7 +40,7 @@ Method data:
 }
 ```
 * `/set_target` - Sets target for the next block. Only accessible if `test` mode is enabled. Target is a 256-bit number that represents the difficulty of the block.
-* `/mint` - Mints new coins to the account. Only accessible if `test` mode is enabled.
+* `/mint` - Mints new coins to the account **without making a transaction**. Only accessible if `test` mode is enabled.
 
 Method data:
 ```json

@@ -1,8 +1,9 @@
+extern crate core;
+
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;
-
 pub mod backend;
 
 use backend::{get, post, test};
@@ -12,7 +13,7 @@ pub mod models;
 
 pub struct NodeData {
     pub pool: PgPool,
-    pub mode: models::api::NodeMode,
+    pub config: models::config::Config,
 }
 
 #[actix_web::main]
@@ -20,10 +21,11 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     let pool = db::init().await.unwrap();
+    let config = models::config::Config::parse();
 
     let app = App::new().app_data(NodeData {
         pool: pool.clone(),
-        mode: Default::default(),
+        config,
     });
 
     // route GET methods
@@ -34,6 +36,7 @@ async fn main() -> std::io::Result<()> {
         .service(get::get_block_by_hash)
         .service(get::get_block_by_id)
         .service(get::get_proof)
+        .service(get::get_nonce)
         .service(get::get_target)
         .service(get::block_height);
 

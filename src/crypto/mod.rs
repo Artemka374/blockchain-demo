@@ -1,5 +1,4 @@
-mod ecdsa;
-mod elliptic;
-pub(crate) mod hash;
+pub mod hash;
+pub mod sig;
 
 use blake2::Digest;

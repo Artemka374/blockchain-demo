@@ -1,13 +1,12 @@
-use crate::models::api::{ApiGenerateSig, NodeMode};
+use crate::models::api::{ApiGenerateSig, ApiVerifyProof, ApiVerifySig, NodeMode};
 use crate::models::error::ServerError;
-use crate::models::merkle_tree::MerkleProof;
 use crate::models::primitives::H256;
 use crate::NodeData;
 use actix_web::web;
 
 #[actix_web::get("/get_mode")]
 pub async fn get_mode(node_data: web::Data<NodeData>) -> Result<NodeMode, ServerError> {
-    Ok(node_data.mode.clone())
+    Ok(node_data.config.node_mode.clone())
 }
 
 #[actix_web::post("/set_mode")]
@@ -15,7 +14,7 @@ pub async fn set_mode(
     node_data: web::Data<NodeData>,
     mode: web::Json<NodeMode>,
 ) -> Result<(), ServerError> {
-    node_data.mode = mode.into_inner();
+    node_data.config.node_mode = mode.into_inner();
     Ok(())
 }
 

@@ -10,6 +10,18 @@ pub enum NodeMode {
     Test,
 }
 
+impl From<String> for NodeMode {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "full" => NodeMode::Full,
+            "test" => NodeMode::Test,
+            _ => {
+                panic!("Invalid node mode: {}", s);
+            }
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiTransfer {
     pub from: Address,
@@ -22,7 +34,6 @@ pub struct ApiTransfer {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MineInfo {
     pub miner: Address,
-    pub block_number: u64,
     pub block_nonce: u64,
     pub nonce: u64,
     pub signature: String,

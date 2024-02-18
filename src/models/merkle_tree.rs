@@ -31,6 +31,13 @@ impl MerkleTree {
     pub fn initialize(&mut self, leaves: Vec<H256>) -> Result<(), MerkleTreeError> {
         self.leaves = leaves.clone();
 
+        if leaves.size() > self.size {
+            return Err(MerkleTreeError::LeavesAmountGreaterThanTreeSize);
+        } else if leaves.size() < self.size {
+            let padding: Vec<H256> = vec![H256::zero(); self.size - leaves.size()];
+            self.leaves.extend(padding);
+        }
+
         self.nodes
             .extend(leaves.into_iter().enumerate().map(|(index, hash)| {
                 let direction = if index % 2 == 0 {
