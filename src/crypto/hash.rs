@@ -5,9 +5,9 @@ pub fn hash_nodes(left: &H256, right: &H256) -> H256 {
     let mut hasher = blake2::Blake2s256::new();
 
     let data = left
-        .as_slice()
+        .as_bytes()
         .into_iter()
-        .chain(right.as_slice().into_iter())
+        .chain(right.as_bytes().into_iter())
         .cloned()
         .collect::<Vec<u8>>();
 

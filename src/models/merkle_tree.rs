@@ -1,6 +1,6 @@
 use crate::crypto::hash::hash_nodes;
 use crate::models::error::MerkleTreeError;
-use crate::models::primitives::H256;
+use crate::models::primitives::{Id, H256};
 use serde::{Deserialize, Serialize};
 
 pub struct MerkleTree {
@@ -28,6 +28,7 @@ impl MerkleTree {
         }
     }
 
+    /// Create a new MerkleTree from a list of nodes, nodes should be indexes correctly
     pub fn from_nodes(nodes: Vec<MerkleNode>) -> Result<Self, MerkleTreeError> {
         let depth = nodes.len().checked_ilog2().unwrap();
         let size = 1 << depth;
@@ -46,6 +47,7 @@ impl MerkleTree {
         Ok(tree)
     }
 
+    /// Initialize the MerkleTree with a list of leaves
     pub fn initialize(&mut self, leaves: Vec<H256>) -> Result<(), MerkleTreeError> {
         self.leaves = leaves.clone();
 
@@ -95,11 +97,13 @@ impl MerkleTree {
         Ok(())
     }
 
+    /// Get the root of the MerkleTree
     pub fn root(&self) -> Option<H256> {
         self.root
     }
 
-    pub fn get_proof(&self, leaf_index: usize) -> Result<MerkleProof, MerkleTreeError> {
+    /// Get the proof for a leaf in the MerkleTree
+    pub fn get_proof(&self, leaf_index: Id) -> Result<MerkleProof, MerkleTreeError> {
         let mut proof = MerkleProof::new();
 
         let mut index = leaf_index;
@@ -144,6 +148,7 @@ impl MerkleProof {
         self.nodes.iter().map(|node| node.as_bvtes()).collect()
     }
 
+    /// Deserializes MerkleProof from vector of serialized MerkleNodes
     pub fn from_bvtes(buffer: Vec<[u8; 33]>) -> Result<Self, MerkleTreeError> {
         let nodes = buffer
             .into_iter()
@@ -161,6 +166,7 @@ impl MerkleProof {
         Ok(())
     }
 
+    /// Verifies proof with given hash
     pub fn verify(&self, hash: H256) -> bool {
         let mut current_node = MerkleNode::new(hash, None);
 
@@ -203,6 +209,7 @@ impl MerkleNode {
         }
     }
 
+    /// Create a new MerkleNode from two child nodes
     pub fn from_children(
         left: MerkleNode,
         right: MerkleNode,
@@ -215,9 +222,10 @@ impl MerkleNode {
         }
     }
 
+    /// Serializes MerkleNode to bytes, first 32 bytes are hash, last byte is direction
     pub fn as_bvtes(&self) -> [u8; 33] {
         let mut buffer = [0u8; 33];
-        buffer[..=32].copy_from_slice(self.hash.as_slice());
+        buffer[..=32].copy_from_slice(self.hash.as_bytes());
         let direction = buffer.last_mut().unwrap();
         *direction = match self.parent_direction {
             Some(Direction::Left) => 0,
@@ -227,6 +235,7 @@ impl MerkleNode {
         buffer
     }
 
+    /// Deserializes MerkleNode from bytes, first 32 bytes are hash, last byte is direction
     pub fn from_bytes(buffer: [u8; 33]) -> Result<Self, MerkleTreeError> {
         let hash = H256::from_slice(&buffer[..=32]);
         let direction = match buffer[32] {

@@ -32,7 +32,7 @@ impl Block {
         verify_signature(
             &self.produced_by.unwrap(),
             signature,
-            hash_message(message.as_bytes()).as_slice(),
+            hash_message(message.as_bytes()).as_bytes(),
         )
     }
 
@@ -61,7 +61,7 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn verify_signature(&self) -> Result<(), error::CryptoError> {
-        verify_signature(&self.from, self.sig.clone(), &self.hash().as_slice())
+        verify_signature(&self.from, self.sig.clone(), &self.hash().as_bytes())
     }
 
     pub fn hash(&self) -> H256 {

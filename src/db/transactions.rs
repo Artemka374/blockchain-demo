@@ -1,6 +1,6 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
-use crate::models::primitives::{Address, Signature, H256};
+use crate::models::primitives::{Address, Id, Signature, H256};
 use crate::models::Transaction;
 
 pub async fn add_pending_transaction(

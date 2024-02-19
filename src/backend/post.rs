@@ -1,11 +1,12 @@
-use crate::crypto::hash::hash_message;
-use crate::crypto::sig::verify_signature;
-use crate::models::api::{ApiMint, ApiTransfer, MineInfo, NodeMode};
-use crate::models::error::ServerError;
-use crate::models::merkle_tree::MerkleTree;
-use crate::models::primitives::Signature;
-use crate::models::{Block, Transaction};
-use crate::{db, NodeData};
+use crate::db::{accounts, blocks, transactions, *};
+use crate::models::{
+    api::{ApiMint, ApiTransfer, MineInfo, NodeMode},
+    error::ServerError,
+    merkle_tree::MerkleTree,
+    primitives::Signature,
+    {Block, Transaction},
+};
+use crate::NodeData;
 use actix_web::web;
 
 #[actix_web::post("/add_transaction")]
@@ -13,20 +14,20 @@ pub async fn transfer(
     data: web::Data<NodeData>,
     transfer_info: web::Json<ApiTransfer>,
 ) -> Result<(), ServerError> {
-    let mut conn = db::connection(&data.pool).await?;
+    let mut conn = connection(&data.pool).await?;
     let transfer_info = transfer_info.into_inner();
 
     let tx = Transaction {
         from: transfer_info.from,
         to: transfer_info.to,
         amount: transfer_info.amount as u64,
-        nonce: db::get_nonce(&mut conn, transfer_info.from).await?,
+        nonce: accounts::get_nonce(&mut conn, transfer_info.from).await?,
         sig: Signature::from_slice(transfer_info.signature.as_bytes()),
     };
 
     tx.verify_signature()?;
 
-    db::add_pending_transaction(&mut conn, tx).await?;
+    transactions::add_pending_transaction(&mut conn, tx).await?;
 
     Ok(())
 }
@@ -36,10 +37,11 @@ pub async fn try_mine(
     data: web::Data<NodeData>,
     mine_info: web::Json<MineInfo>,
 ) -> Result<(), ServerError> {
-    let mut conn = db::connection(&data.pool).await?;
+    let mut conn = connection(&data.pool).await?;
     let signature = Signature::from_slice(mine_info.signature.as_bytes());
 
-    let transactions = db::get_pending_transactions(&mut conn, data.config.block_size).await?;
+    let transactions =
+        transactions::get_pending_transactions(&mut conn, data.config.block_size).await?;
 
     if transactions.is_empty() {
         return Err(ServerError::new(400, "No transactions to mine".to_string()));
@@ -51,7 +53,7 @@ pub async fn try_mine(
 
     tree.initialize(tx_hashes.clone())?;
 
-    let (latest_block, latest_hash) = db::get_latest_block(&mut conn).await?;
+    let (latest_block, latest_hash) = blocks::get_latest_block(&mut conn).await?;
 
     let mut block = Block {
         id: latest_block + 1,
@@ -75,7 +77,7 @@ pub async fn try_mine(
         }
     }
 
-    db::add_block(
+    blocks::add_block(
         &mut conn,
         block.id,
         hash,
@@ -83,10 +85,10 @@ pub async fn try_mine(
         mine_info.miner,
     )
     .await?;
-    //todo update method
-    db::add_merkle_tree(&mut conn).await?;
-    db::add_transactions_to_block(&mut conn, &tx_hashes, block.id).await?;
-    db::update_balance(&mut conn, mine_info.miner, data.config.base_reward).await?;
+
+    merkle_tree::add_merkle_tree(&mut conn, block.id, tree).await?;
+    transactions::add_transactions_to_block(&mut conn, &tx_hashes, block.id).await?;
+    accounts::update_balance(&mut conn, mine_info.miner, data.config.base_reward).await?;
 
     Ok(())
 }
@@ -102,10 +104,10 @@ pub async fn mint(
     data: web::Data<NodeData>,
     mint_info: web::Json<ApiMint>,
 ) -> Result<(), ServerError> {
-    let mut conn = db::connection(&data.pool).await?;
+    let mut conn = connection(&data.pool).await?;
     let mint_info = mint_info.into_inner();
 
-    db::update_balance(&mut conn, mint_info.to, mint_info.amount as i64).await?;
+    accounts::update_balance(&mut conn, mint_info.to, mint_info.amount).await?;
 
     Ok(())
 }

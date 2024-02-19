@@ -1,34 +1,35 @@
-use crate::models::{
-    error::ServerError,
-    merkle_tree::MerkleProof,
-    Transaction,
-    Block
-};
-}
-use actix_web::{web, HttpResponse};
-use crate::{db, NodeData};
 use crate::models::primitives::{Address, H256};
+use crate::models::{
+    error::ServerError, merkle_tree, merkle_tree::MerkleProof, Block, Transaction,
+};
+use crate::{db, NodeData};
+use actix_web::{web, HttpResponse};
+use db::{accounts, transactions};
 
 #[actix_web::get("/get_balance/{address}")]
-pub async fn get_balance(data: web::Data<NodeData>, address: web::Path<String>) -> Result<HttpResponse, ServerError> {
+pub async fn get_balance(
+    data: web::Data<NodeData>,
+    address: web::Path<String>,
+) -> Result<HttpResponse, ServerError> {
     let mut conn = db::connection(&data.pool).await?;
     let address = Address::from_hex_string(&address.into_inner());
 
-    let balance = db::get_balance(&mut conn, address).await?;
+    let balance = accounts::get_balance(&mut conn, address).await?;
 
     Ok(HttpResponse::Ok().json(balance))
 }
 
 #[actix_web::get("/get_transaction/{tx_hash}")]
-pub async fn get_transaction(data: web::Data<NodeData>, tx_hash: web::Path<String>) -> Result<HttpResponse, ServerError> {
-
+pub async fn get_transaction(
+    data: web::Data<NodeData>,
+    tx_hash: web::Path<String>,
+) -> Result<HttpResponse, ServerError> {
     let mut conn = db::connection(&data.pool).await?;
 
     let decoded_hash = hex::decode(tx_hash.into_inner())?;
     let tx_hash = H256::from_slice(&decoded_hash);
 
-
-    let transaction = db::get_transaction(&mut conn, tx_hash).await?;
+    let transaction = transactions::get_transaction(&mut conn, tx_hash).await?;
     todo!()
 }
 
@@ -53,24 +54,50 @@ pub async fn get_block_by_id(block_id: web::Path<u64>) -> Result<Block, ServerEr
 }
 
 #[actix_web::get("/get_proof/{tx_hash}")]
-pub async fn get_proof(tx_hash: web::Path<String>) -> Result<MerkleProof, ServerError> {
-    // tx_hash - H256
-    let tx_hash = tx_hash.into_inner();
-    todo!()
+pub async fn get_proof(
+    data: web::Data<NodeData>,
+    tx_hash: web::Path<String>,
+) -> Result<Vec<String>, ServerError> {
+    let tx_hash = H256::from_slice(tx_hash.into_inner().as_bytes());
+
+    let mut conn = db::connection(&data.pool).await?;
+
+    let (index, block_id) = db::merkle_tree::get_transaction_index_and_block(&mut conn, tx_hash)
+        .await?
+        .ok_or(ServerError::new(
+            404,
+            format!(
+                "Transaction with hash {} not found",
+                tx_hash.as_hex_string()
+            ),
+        ))?;
+
+    let tree = db::merkle_tree::get_merkle_tree(&mut conn, block_id).await?;
+    let proof = tree.get_proof(index)?;
+
+    Ok(proof.as_bvtes().iter().map(|b| hex::encode(b)).collect())
 }
 
 #[actix_web::get("/get_nonce/{address}")]
-pub async fn get_nonce(address: web::Path<String>) -> Result<u64, ServerError> {
-    let address = address.into_inner();
-    todo!()
+pub async fn get_nonce(
+    data: web::Data<NodeData>,
+    address: web::Path<String>,
+) -> Result<u64, ServerError> {
+    let mut conn = db::connection(&data.pool).await?;
+    let address = Address::from_hex_string(&address.into_inner());
+    accounts::get_nonce(&mut conn, address).await
 }
 
 #[actix_web::get("/get_target")]
-pub async fn get_target() -> Result<u64, ServerError> {
-    todo!()
+pub async fn get_target(data: web::Data<NodeData>) -> Result<u64, ServerError> {
+    Ok(data.config.target)
 }
 
 #[actix_web::get("/block_height")]
-pub async fn block_height() -> Result<u64, ServerError> {
-    todo!()
+pub async fn block_height(data: web::Data<NodeData>) -> Result<u64, ServerError> {
+    let mut conn = db::connection(&data.pool).await?;
+
+    let (block_id, _) = db::blocks::get_latest_block(&mut conn).await?;
+
+    Ok(block_id)
 }

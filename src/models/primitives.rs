@@ -3,7 +3,8 @@ use std::time::SystemTime;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Address([u8; 33]);
 
-pub type Balance = u64;
+pub type Balance = u128;
+pub type Id = u64;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Timestamp(u64);
@@ -33,7 +34,7 @@ impl H256 {
         self.0.to_vec()
     }
 
-    pub fn as_slice(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
