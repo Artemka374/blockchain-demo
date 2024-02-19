@@ -28,6 +28,24 @@ impl MerkleTree {
         }
     }
 
+    pub fn from_nodes(nodes: Vec<MerkleNode>) -> Result<Self, MerkleTreeError> {
+        let depth = nodes.len().checked_ilog2().unwrap();
+        let size = 1 << depth;
+
+        let mut tree = MerkleTree::new(size);
+        let leaves: Vec<H256> = nodes.iter().take(size).map(|node| node.hash).collect();
+
+        tree.initialize(leaves)?;
+
+        for i in 0..nodes.len() {
+            if nodes[i] != tree.nodes[i] {
+                return Err(MerkleTreeError::DeserializingError);
+            }
+        }
+
+        Ok(tree)
+    }
+
     pub fn initialize(&mut self, leaves: Vec<H256>) -> Result<(), MerkleTreeError> {
         self.leaves = leaves.clone();
 
@@ -51,7 +69,7 @@ impl MerkleTree {
         let mut layer_start = 0;
         let mut layer_end = self.nodes.len();
 
-        for _depth in 1..self.depth {
+        for _ in 1..self.depth {
             for i in (layer_start..layer_end).step_by(2) {
                 let left = self.nodes[i].clone();
                 let right = self.nodes[i + 1].clone();
@@ -122,6 +140,18 @@ impl MerkleProof {
         MerkleProof { nodes }
     }
 
+    pub fn as_bvtes(&self) -> Vec<[u8; 33]> {
+        self.nodes.iter().map(|node| node.as_bvtes()).collect()
+    }
+
+    pub fn from_bvtes(buffer: Vec<[u8; 33]>) -> Result<Self, MerkleTreeError> {
+        let nodes = buffer
+            .into_iter()
+            .map(|buffer| MerkleNode::from_bytes(buffer))
+            .collect::<Result<Vec<MerkleNode>, MerkleTreeError>>()?;
+        Ok(MerkleProof::from_nodes(nodes))
+    }
+
     pub fn get_nodes(&self) -> Vec<MerkleNode> {
         self.nodes.clone()
     }
@@ -183,6 +213,29 @@ impl MerkleNode {
             hash,
             parent_direction: direction,
         }
+    }
+
+    pub fn as_bvtes(&self) -> [u8; 33] {
+        let mut buffer = [0u8; 33];
+        buffer[..=32].copy_from_slice(self.hash.as_slice());
+        let direction = buffer.last_mut().unwrap();
+        *direction = match self.parent_direction {
+            Some(Direction::Left) => 0,
+            Some(Direction::Right) => 1,
+            None => 2,
+        };
+        buffer
+    }
+
+    pub fn from_bytes(buffer: [u8; 33]) -> Result<Self, MerkleTreeError> {
+        let hash = H256::from_slice(&buffer[..=32]);
+        let direction = match buffer[32] {
+            0 => Some(Direction::Left),
+            1 => Some(Direction::Right),
+            2 => None,
+            _ => return Err(MerkleTreeError::DeserializingError),
+        };
+        Ok(MerkleNode::new(hash, direction))
     }
 }
 

@@ -3,6 +3,7 @@ pub enum MerkleTreeError {
     EmptyTree,
     MerkleTreeNotInitialized,
     LeavesAmountGreaterThanTreeSize,
+    DeserializingError,
 }
 
 pub enum ServerError {

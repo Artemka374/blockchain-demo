@@ -26,9 +26,10 @@ CREATE TABLE accounts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE merkle_tree (
+CREATE TABLE merkle_nodes (
     block_id BIGINT,
     root bytea,
-    hashes bytea[],
+    node bytea,
+    index BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
