@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 #[derive(Debug, PartialEq)]
 pub enum MerkleTreeError {
     EmptyTree,
@@ -15,21 +17,25 @@ pub enum CryptoError {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ServerError {
-    DatabaseError,
-    TransactionError,
-    MerkleTreeError(MerkleTreeError),
-    CryptoError(CryptoError),
+pub struct ServerError {
+    pub code: u16,
+    pub message: String,
+}
+
+impl ServerError {
+    pub fn new(code: u16, message: String) -> Self {
+        ServerError { code, message }
+    }
 }
 
 impl From<MerkleTreeError> for ServerError {
     fn from(err: MerkleTreeError) -> Self {
-        ServerError::MerkleTreeError(err)
+        ServerError::new(400, format!("MerkleTreeError: {:?}", err))
     }
 }
 
 impl From<CryptoError> for ServerError {
     fn from(err: CryptoError) -> Self {
-        ServerError::CryptoError(err)
+        ServerError::new(400, format!("Crypto error: {:?}", err))
     }
 }

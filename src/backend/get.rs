@@ -31,47 +31,53 @@ pub async fn get_transaction(
     let tx_hash = H256::from_slice(&decoded_hash);
 
     let tx = transactions::get_transaction(&mut conn, tx_hash).await?;
-    todo!()
+    Ok(HttpResponse::Ok().json(tx))
 }
 
 #[actix_web::get("/get_transactions/{address}")]
 pub async fn get_transactions(
     data: web::Data<NodeData>,
     address: web::Path<String>,
-) -> Result<Vec<Transaction>, ServerError> {
-    // address - Address
+) -> Result<HttpResponse, ServerError> {
     let address = Address::from_hex_string(&address.into_inner());
     let mut conn = db::connection(&data.pool).await?;
 
-    transactions::get_transactions(&mut conn, address).await
+    let txs = transactions::get_transactions(&mut conn, address).await?;
+
+    Ok(HttpResponse::Ok().json(txs))
 }
 
 #[actix_web::get("/get_block_by_hash/{block_hash}")]
 pub async fn get_block_by_hash(
     data: web::Data<NodeData>,
     block_hash: web::Path<String>,
-) -> Result<Option<Block>, ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let block_hash = H256::from_slice(block_hash.into_inner().as_bytes());
     let mut conn = db::connection(&data.pool).await?;
-    blocks::get_block_by_hash(&mut conn, block_hash).await
+
+    let block = blocks::get_block_by_hash(&mut conn, block_hash).await?;
+
+    Ok(HttpResponse::Ok().json(block))
 }
 
 #[actix_web::get("/get_block_by_id/{block_id}")]
 pub async fn get_block_by_id(
     data: web::Data<NodeData>,
     block_id: web::Path<u64>,
-) -> Result<Option<Block>, ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let block_id = block_id.into_inner();
     let mut conn = db::connection(&data.pool).await?;
 
-    blocks::get_block_by_id(&mut conn, block_id).await
+    let block = blocks::get_block_by_id(&mut conn, block_id).await?;
+
+    Ok(HttpResponse::Ok().json(block))
 }
 
 #[actix_web::get("/get_proof/{tx_hash}")]
 pub async fn get_proof(
     data: web::Data<NodeData>,
     tx_hash: web::Path<String>,
-) -> Result<Vec<String>, ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let tx_hash = H256::from_slice(tx_hash.into_inner().as_bytes());
 
     let mut conn = db::connection(&data.pool).await?;
@@ -89,29 +95,33 @@ pub async fn get_proof(
     let tree = db::merkle_tree::get_merkle_tree(&mut conn, block_id).await?;
     let proof = tree.get_proof(index)?;
 
-    Ok(proof.as_bvtes().iter().map(|b| hex::encode(b)).collect())
+    let encoded_proof = proof.as_bvtes().iter().map(|b| hex::encode(b)).collect();
+    Ok(HttpResponse::Ok().json(encoded_proof))
 }
 
 #[actix_web::get("/get_nonce/{address}")]
 pub async fn get_nonce(
     data: web::Data<NodeData>,
     address: web::Path<String>,
-) -> Result<u64, ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let mut conn = db::connection(&data.pool).await?;
     let address = Address::from_hex_string(&address.into_inner());
-    accounts::get_nonce(&mut conn, address).await
+
+    let nonce = accounts::get_nonce(&mut conn, address).await?;
+
+    Ok(HttpResponse::Ok().json(nonce))
 }
 
 #[actix_web::get("/get_target")]
-pub async fn get_target(data: web::Data<NodeData>) -> Result<u64, ServerError> {
-    Ok(data.config.target)
+pub async fn get_target(data: web::Data<NodeData>) -> Result<HttpResponse, ServerError> {
+    Ok(HttpResponse::Ok().json(data.config.target))
 }
 
 #[actix_web::get("/block_height")]
-pub async fn block_height(data: web::Data<NodeData>) -> Result<u64, ServerError> {
+pub async fn block_height(data: web::Data<NodeData>) -> Result<HttpResponse, ServerError> {
     let mut conn = db::connection(&data.pool).await?;
 
     let (block_id, _) = db::blocks::get_latest_block(&mut conn).await?;
 
-    Ok(block_id)
+    Ok(HttpResponse::Ok().json(block_id))
 }

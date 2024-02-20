@@ -1,5 +1,6 @@
 use crate::crypto::hash::hash_message;
 use crate::crypto::sig::verify_signature;
+use crate::models::error::CryptoError;
 use crate::models::merkle_tree::MerkleTree;
 use crate::models::primitives::{Address, Balance, Id, Signature, H256};
 
@@ -20,7 +21,7 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn verify(&self, signature: Signature) -> Result<(), error::Error> {
+    pub fn verify(&self, signature: Signature) -> Result<(), CryptoError> {
         let message = format!(
             "Mine block miner:{} parent_hash:{} merkle_root:{} nonce:{}",
             self.produced_by.unwrap().as_hex_string(),
@@ -49,8 +50,9 @@ impl Block {
     }
 }
 
-#[derive(Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
+#[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
 pub enum TransactionStatus {
+    #[default]
     Pending,
     Confirmed,
 }

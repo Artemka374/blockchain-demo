@@ -25,7 +25,7 @@ async fn main() -> std::io::Result<()> {
 
     let app = App::new().app_data(NodeData {
         pool: pool.clone(),
-        config,
+        config: config.clone(),
     });
 
     // route GET methods
@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
         .service(test::verify_proof);
 
     HttpServer::new(move || app)
-        .bind(env::var("SERVER_URL"))?
+        .bind(config.server_url)?
         .run()
         .await
 }

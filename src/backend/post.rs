@@ -7,13 +7,13 @@ use crate::models::{
     TransactionStatus, {Block, Transaction},
 };
 use crate::NodeData;
-use actix_web::web;
+use actix_web::{web, HttpResponse};
 
 #[actix_web::post("/add_transaction")]
 pub async fn transfer(
     data: web::Data<NodeData>,
     transfer_info: web::Json<ApiTransfer>,
-) -> Result<(), ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let mut conn = connection(&data.pool).await?;
     let transfer_info = transfer_info.into_inner();
 
@@ -29,14 +29,14 @@ pub async fn transfer(
 
     transactions::add_pending_transaction(&mut conn, tx).await?;
 
-    Ok(())
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::post("/try_mine")]
 pub async fn try_mine(
     data: web::Data<NodeData>,
     mine_info: web::Json<MineInfo>,
-) -> Result<(), ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let mut conn = connection(&data.pool).await?;
     let signature = Signature::from_slice(mine_info.signature.as_bytes());
 
@@ -90,24 +90,27 @@ pub async fn try_mine(
     transactions::add_transactions_to_block(&mut conn, &tx_hashes, block.id).await?;
     accounts::update_balance(&mut conn, mine_info.miner, data.config.base_reward).await?;
 
-    Ok(())
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::post("/set_target")]
-pub async fn set_target(data: web::Data<NodeData>, target: u64) -> Result<(), ServerError> {
+pub async fn set_target(
+    data: web::Data<NodeData>,
+    target: u64,
+) -> Result<HttpResponse, ServerError> {
     data.config.target = target;
-    Ok(())
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::post("/mint")]
 pub async fn mint(
     data: web::Data<NodeData>,
     mint_info: web::Json<ApiMint>,
-) -> Result<(), ServerError> {
+) -> Result<HttpResponse, ServerError> {
     let mut conn = connection(&data.pool).await?;
     let mint_info = mint_info.into_inner();
 
     accounts::update_balance(&mut conn, mint_info.to, mint_info.amount).await?;
 
-    Ok(())
+    Ok(HttpResponse::Ok().finish())
 }
