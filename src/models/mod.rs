@@ -1,11 +1,10 @@
 use crate::crypto::hash::hash_message;
 use crate::crypto::sig::verify_signature;
 use crate::models::merkle_tree::MerkleTree;
-use crate::models::primitives::{Address, Signature, H256};
+use crate::models::primitives::{Address, Balance, Id, Signature, H256};
 
 pub mod api;
 pub mod config;
-pub mod constants;
 pub mod error;
 pub mod merkle_tree;
 pub mod primitives;
@@ -50,18 +49,44 @@ impl Block {
     }
 }
 
+#[derive(Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
+pub enum TransactionStatus {
+    Pending,
+    Confirmed,
+}
+
+impl TransactionStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TransactionStatus::Pending => "pending",
+            TransactionStatus::Confirmed => "confirmed",
+        }
+    }
+}
+
+impl From<&str> for TransactionStatus {
+    fn from(s: &str) -> Self {
+        match s {
+            "pending" => TransactionStatus::Pending,
+            "confirmed" => TransactionStatus::Confirmed,
+            _ => panic!("Invalid transaction status"),
+        }
+    }
+}
+
 #[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
 pub struct Transaction {
     pub from: Address,
     pub to: Address,
-    pub amount: u64,
+    pub amount: Balance,
+    pub block_id: Id,
     pub nonce: u64,
-    pub sig: Signature,
+    pub status: TransactionStatus,
 }
 
 impl Transaction {
-    pub fn verify_signature(&self) -> Result<(), error::CryptoError> {
-        verify_signature(&self.from, self.sig.clone(), &self.hash().as_bytes())
+    pub fn verify_signature(&self, signature: Signature) -> Result<(), error::CryptoError> {
+        verify_signature(&self.from, signature, &self.hash().as_bytes())
     }
 
     pub fn hash(&self) -> H256 {

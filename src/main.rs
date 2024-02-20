@@ -20,7 +20,7 @@ pub struct NodeData {
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
-    let pool = db::init().await.unwrap();
+    let pool = db::init().await.expect("Failed to connect to database");
     let config = models::config::Config::parse();
 
     let app = App::new().app_data(NodeData {

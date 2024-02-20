@@ -46,8 +46,41 @@ pub async fn add_transactions_to_block(
 pub async fn get_transaction(
     conn: &mut PoolConn,
     tx_hash: H256,
-) -> Result<Transaction, ServerError> {
-    todo!()
+) -> Result<Option<Transaction>, ServerError> {
+    let tx: Option<Transaction> = sqlx::query_as!(
+        Transaction,
+        r#"
+        SELECT hash, from, to, amount, block_id, nonce, status
+        FROM transactions
+        WHERE hash = $1
+        "#,
+        tx_hash.as_bytes()
+    )
+    .fetch_optional(conn)
+    .await
+    .map_err(|e| ServerError::new(500, format!("Failed getting transaction: {}", e)))?;
+
+    Ok(tx)
+}
+
+pub async fn get_transactions(
+    conn: &mut PoolConn,
+    address: Address,
+) -> Result<Vec<Transaction>, ServerError> {
+    let txs: Vec<_> = sqlx::query_as!(
+        Transaction,
+        r#"
+        SELECT hash, from, to, amount, block_id, nonce, status
+        FROM transactions
+        WHERE "from" = $1 OR "to" = $1
+        "#,
+        address.as_bytes()
+    )
+    .fetch_all(conn)
+    .await
+    .map_err(|e| ServerError::new(500, format!("Failed getting transactions: {}", e)))?;
+
+    Ok(txs)
 }
 
 pub async fn get_pending_transactions(

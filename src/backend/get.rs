@@ -1,3 +1,4 @@
+use crate::db::blocks;
 use crate::models::primitives::{Address, H256};
 use crate::models::{
     error::ServerError, merkle_tree, merkle_tree::MerkleProof, Block, Transaction,
@@ -29,28 +30,41 @@ pub async fn get_transaction(
     let decoded_hash = hex::decode(tx_hash.into_inner())?;
     let tx_hash = H256::from_slice(&decoded_hash);
 
-    let transaction = transactions::get_transaction(&mut conn, tx_hash).await?;
+    let tx = transactions::get_transaction(&mut conn, tx_hash).await?;
     todo!()
 }
 
 #[actix_web::get("/get_transactions/{address}")]
-pub async fn get_transactions(address: web::Path<String>) -> Result<Vec<Transaction>, ServerError> {
+pub async fn get_transactions(
+    data: web::Data<NodeData>,
+    address: web::Path<String>,
+) -> Result<Vec<Transaction>, ServerError> {
     // address - Address
-    let address = address.into_inner();
-    todo!()
+    let address = Address::from_hex_string(&address.into_inner());
+    let mut conn = db::connection(&data.pool).await?;
+
+    transactions::get_transactions(&mut conn, address).await
 }
 
 #[actix_web::get("/get_block_by_hash/{block_hash}")]
-pub async fn get_block_by_hash(block_hash: web::Path<String>) -> Result<Block, ServerError> {
-    // block_hash - H256
-    let block_hash = block_hash.into_inner();
-    todo!()
+pub async fn get_block_by_hash(
+    data: web::Data<NodeData>,
+    block_hash: web::Path<String>,
+) -> Result<Option<Block>, ServerError> {
+    let block_hash = H256::from_slice(block_hash.into_inner().as_bytes());
+    let mut conn = db::connection(&data.pool).await?;
+    blocks::get_block_by_hash(&mut conn, block_hash).await
 }
 
 #[actix_web::get("/get_block_by_id/{block_id}")]
-pub async fn get_block_by_id(block_id: web::Path<u64>) -> Result<Block, ServerError> {
+pub async fn get_block_by_id(
+    data: web::Data<NodeData>,
+    block_id: web::Path<u64>,
+) -> Result<Option<Block>, ServerError> {
     let block_id = block_id.into_inner();
-    todo!()
+    let mut conn = db::connection(&data.pool).await?;
+
+    blocks::get_block_by_id(&mut conn, block_id).await
 }
 
 #[actix_web::get("/get_proof/{tx_hash}")]

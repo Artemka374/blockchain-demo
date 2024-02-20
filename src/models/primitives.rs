@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Address([u8; 33]);
 
 pub type Balance = u128;

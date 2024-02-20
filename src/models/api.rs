@@ -61,6 +61,5 @@ pub struct ApiVerifySig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiVerifyProof {
     pub tx_hash: String,
-    pub proof: Vec<MerkleNode>,
-    pub root: String,
+    pub proof: Vec<[u8; 33]>,
 }

@@ -4,7 +4,7 @@ use crate::models::{
     error::ServerError,
     merkle_tree::MerkleTree,
     primitives::Signature,
-    {Block, Transaction},
+    TransactionStatus, {Block, Transaction},
 };
 use crate::NodeData;
 use actix_web::web;
@@ -20,12 +20,12 @@ pub async fn transfer(
     let tx = Transaction {
         from: transfer_info.from,
         to: transfer_info.to,
-        amount: transfer_info.amount as u64,
+        amount: transfer_info.amount,
         nonce: accounts::get_nonce(&mut conn, transfer_info.from).await?,
-        sig: Signature::from_slice(transfer_info.signature.as_bytes()),
+        status: TransactionStatus::Pending,
     };
 
-    tx.verify_signature()?;
+    tx.verify_signature(Signature::from_slice(transfer_info.signature.as_bytes()))?;
 
     transactions::add_pending_transaction(&mut conn, tx).await?;
 
