@@ -27,8 +27,8 @@ impl Serialize for Address {
     }
 }
 
-impl Deserialize<'_> for Address {
-    fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
+impl<'de> Deserialize<'de> for Address {
+    fn deserialize<D>(deserializer: D) -> Result<Address, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
@@ -122,8 +122,8 @@ impl Serialize for H256 {
     }
 }
 
-impl Deserialize<'_> for H256 {
-    fn deserialize<'de, D>(deserializer: D) -> Result<H256, D::Error>
+impl<'de> Deserialize<'de> for H256 {
+    fn deserialize<D>(deserializer: D) -> Result<H256, D::Error>
     where
         D: serde::Deserializer<'de>,
     {

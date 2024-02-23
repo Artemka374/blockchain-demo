@@ -10,43 +10,34 @@ pub async fn add_merkle_tree(
 ) -> Result<(), ServerError> {
     let root = tree.root().expect("Merkle tree has no nodes!");
 
-    let nodes = tree
-        .nodes
-        .iter()
-        .map(|node| node.as_bvtes())
-        .collect::<Vec<_>>();
-    let indexes = (0..tree.size).collect::<Vec<_>>();
-
-    let query = format!(
-        r"
-        INSERT INTO merkle_trees (block_id, root, node, index)
-        VALUES {}",
-        indexes
-            .iter()
-            .map(|i| format!(
-                "(${}, ${}, ${}, ${})",
-                4 * i,
-                4 * i + 1,
-                4 * i + 2,
-                4 * i + 3
-            ))
-            .collect::<Vec<_>>()
-            .join(", "),
-    );
-    let mut query = sqlx::query(&query);
-
-    for i in 0..tree.size {
-        query = query
-            .bind(block_id as i64)
-            .bind(root.as_bytes())
-            .bind(nodes[i])
-            .bind(i as i64);
+    let nodes = tree.nodes;
+    for i in 0..nodes.len() {
+        add_merkle_node(conn, block_id, root, nodes[i].clone(), i).await?;
     }
+    Ok(())
+}
 
-    query
-        .execute(conn)
-        .await
-        .map_err(|e| ServerError::new(500, format!("Failed adding merkle tree: {}", e)))?;
+pub async fn add_merkle_node(
+    conn: &mut PoolConn,
+    block_id: Id,
+    root: H256,
+    node: MerkleNode,
+    index: usize,
+) -> Result<(), ServerError> {
+    let query = sqlx::query!(
+        r#"
+        INSERT INTO merkle_trees (block_id, root, node, index)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (block_id, root, index) DO NOTHING
+        "#,
+        block_id as i64,
+        root.as_bytes(),
+        node.as_bvtes(),
+        index as i64
+    )
+    .execute(conn)
+    .await
+    .map_err(|e| ServerError::new(500, format!("Failed adding merkle node: {}", e)))?;
 
     Ok(())
 }

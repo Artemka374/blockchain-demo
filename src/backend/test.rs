@@ -15,7 +15,7 @@ pub async fn set_mode(
     node_data: web::Data<NodeData>,
     mode: web::Json<NodeMode>,
 ) -> Result<HttpResponse, ServerError> {
-    *node_data.config.node_mode = mode.into_inner();
+    //*node_data.config.node_mode = mode.into_inner();
     Ok(HttpResponse::Ok().json(node_data.config.node_mode.clone()))
 }
 
@@ -67,7 +67,9 @@ pub async fn verify_proof(
             .into_iter()
             .map(|x| {
                 let bytes = hex::decode(x).unwrap();
-                bytes.into()
+                let mut buffer = [0; 33];
+                buffer.copy_from_slice(&bytes);
+                buffer
             })
             .collect::<Vec<_>>(),
     )?;

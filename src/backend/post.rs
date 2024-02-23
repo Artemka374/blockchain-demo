@@ -7,7 +7,7 @@ use crate::models::{
     TransactionStatus, {Block, Transaction},
 };
 use crate::NodeData;
-use actix_web::{web, HttpResponse};
+use actix_web::{web, FromRequest, HttpResponse};
 use std::sync::Arc;
 
 #[actix_web::post("/add_transaction")]
@@ -98,10 +98,13 @@ pub async fn try_mine(
 #[actix_web::post("/set_target")]
 pub async fn set_target(
     data: web::Data<NodeData>,
-    target: u64,
+    target: String,
 ) -> Result<HttpResponse, ServerError> {
-    let mut config = Arc::get_mut(&mut data.into_inner()).unwrap().config;
-    config.target = target;
+    //let mut config = Arc::get_mut(&mut data.into_inner()).unwrap().config;
+    //config.target = target;
+    let target: u64 = target
+        .parse()
+        .map_err(|_| ServerError::new(400, "Invalid target".to_string()))?;
     Ok(HttpResponse::Ok().finish())
 }
 
