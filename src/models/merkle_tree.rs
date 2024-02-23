@@ -51,10 +51,10 @@ impl MerkleTree {
     pub fn initialize(&mut self, leaves: Vec<H256>) -> Result<(), MerkleTreeError> {
         self.leaves = leaves.clone();
 
-        if leaves.size() > self.size {
+        if leaves.len() > self.size {
             return Err(MerkleTreeError::LeavesAmountGreaterThanTreeSize);
-        } else if leaves.size() < self.size {
-            let padding: Vec<H256> = vec![H256::zero(); self.size - leaves.size()];
+        } else if leaves.len() < self.size {
+            let padding: Vec<H256> = vec![H256::zero(); self.size - leaves.len()];
             self.leaves.extend(padding);
         }
 
@@ -111,11 +111,11 @@ impl MerkleTree {
 
         for i in 0..(self.depth - 1) {
             let sibling_index = index ^ 1;
-            let sibling = self.nodes[sibling_index].clone();
+            let sibling = self.nodes[sibling_index as usize].clone();
 
             proof.add_node(sibling)?;
 
-            index = layer_size + (leaf_index >> (i + 1));
+            index = (layer_size + ((leaf_index as usize) >> (i + 1))) as Id;
             layer_size += 1 << (self.depth - i - 2);
         }
 

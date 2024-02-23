@@ -13,7 +13,7 @@ pub fn verify_signature(
     let message =
         secp256k1::Message::from_digest_slice(msg).map_err(|_| CryptoError::InvalidMessage)?;
 
-    secp.verify_ecdsa(&message, &sig.into(), &pubkey.into())
+    secp.verify_ecdsa(&message, &sig.into(), &(*pubkey).into())
         .map_err(|_| CryptoError::InvalidSignature)
 }
 

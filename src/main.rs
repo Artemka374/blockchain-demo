@@ -3,7 +3,6 @@ extern crate core;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use sqlx::PgPool;
-use std::env;
 pub mod backend;
 
 use backend::{get, post, test};

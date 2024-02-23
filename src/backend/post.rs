@@ -8,6 +8,7 @@ use crate::models::{
 };
 use crate::NodeData;
 use actix_web::{web, HttpResponse};
+use std::sync::Arc;
 
 #[actix_web::post("/add_transaction")]
 pub async fn transfer(
@@ -21,11 +22,12 @@ pub async fn transfer(
         from: transfer_info.from,
         to: transfer_info.to,
         amount: transfer_info.amount,
+        block_id: None,
         nonce: accounts::get_nonce(&mut conn, transfer_info.from).await?,
         status: TransactionStatus::Pending,
     };
 
-    tx.verify_signature(Signature::from_slice(transfer_info.signature.as_bytes()))?;
+    tx.verify_signature(Signature::from_hex_string(&transfer_info.signature))?;
 
     transactions::add_pending_transaction(&mut conn, tx).await?;
 
@@ -38,7 +40,7 @@ pub async fn try_mine(
     mine_info: web::Json<MineInfo>,
 ) -> Result<HttpResponse, ServerError> {
     let mut conn = connection(&data.pool).await?;
-    let signature = Signature::from_slice(mine_info.signature.as_bytes());
+    let signature = Signature::from_hex_string(&mine_info.signature);
 
     let transactions =
         transactions::get_pending_transactions(&mut conn, data.config.block_size).await?;
@@ -69,7 +71,7 @@ pub async fn try_mine(
     if data.config.node_mode == NodeMode::Full {
         block.verify(signature)?;
 
-        if hash.leading_zeros() < data.config.target {
+        if hash.leading_zeros() < data.config.target as usize {
             return Err(ServerError::new(
                 400,
                 "Block does not meet target".to_string(),
@@ -98,7 +100,8 @@ pub async fn set_target(
     data: web::Data<NodeData>,
     target: u64,
 ) -> Result<HttpResponse, ServerError> {
-    data.config.target = target;
+    let mut config = Arc::get_mut(&mut data.into_inner()).unwrap().config;
+    config.target = target;
     Ok(HttpResponse::Ok().finish())
 }
 

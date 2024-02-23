@@ -1,8 +1,6 @@
 use crate::db::blocks;
+use crate::models::error::ServerError;
 use crate::models::primitives::{Address, H256};
-use crate::models::{
-    error::ServerError, merkle_tree, merkle_tree::MerkleProof, Block, Transaction,
-};
 use crate::{db, NodeData};
 use actix_web::{web, HttpResponse};
 use db::{accounts, transactions};
@@ -27,7 +25,12 @@ pub async fn get_transaction(
 ) -> Result<HttpResponse, ServerError> {
     let mut conn = db::connection(&data.pool).await?;
 
-    let decoded_hash = hex::decode(tx_hash.into_inner())?;
+    let decoded_hash = hex::decode(tx_hash.into_inner()).map_err(|e| {
+        ServerError::new(
+            400,
+            format!("Failed decoding transaction hash: {}", e.to_string()),
+        )
+    })?;
     let tx_hash = H256::from_slice(&decoded_hash);
 
     let tx = transactions::get_transaction(&mut conn, tx_hash).await?;
@@ -52,7 +55,7 @@ pub async fn get_block_by_hash(
     data: web::Data<NodeData>,
     block_hash: web::Path<String>,
 ) -> Result<HttpResponse, ServerError> {
-    let block_hash = H256::from_slice(block_hash.into_inner().as_bytes());
+    let block_hash = H256::from_hex_string(&block_hash.into_inner());
     let mut conn = db::connection(&data.pool).await?;
 
     let block = blocks::get_block_by_hash(&mut conn, block_hash).await?;
@@ -78,7 +81,7 @@ pub async fn get_proof(
     data: web::Data<NodeData>,
     tx_hash: web::Path<String>,
 ) -> Result<HttpResponse, ServerError> {
-    let tx_hash = H256::from_slice(tx_hash.into_inner().as_bytes());
+    let tx_hash = H256::from_hex_string(&tx_hash.into_inner());
 
     let mut conn = db::connection(&data.pool).await?;
 
@@ -95,7 +98,11 @@ pub async fn get_proof(
     let tree = db::merkle_tree::get_merkle_tree(&mut conn, block_id).await?;
     let proof = tree.get_proof(index)?;
 
-    let encoded_proof = proof.as_bvtes().iter().map(|b| hex::encode(b)).collect();
+    let encoded_proof = proof
+        .as_bvtes()
+        .iter()
+        .map(|b| hex::encode(b))
+        .collect::<Vec<_>>();
     Ok(HttpResponse::Ok().json(encoded_proof))
 }
 

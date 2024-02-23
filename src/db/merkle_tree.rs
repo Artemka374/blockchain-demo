@@ -1,15 +1,14 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
-use crate::models::merkle_tree::{MerkleNode, MerkleProof, MerkleTree};
+use crate::models::merkle_tree::{MerkleNode, MerkleTree};
 use crate::models::primitives::{Id, H256};
-use std::fmt::format;
 
 pub async fn add_merkle_tree(
     conn: &mut PoolConn,
     block_id: Id,
     tree: MerkleTree,
 ) -> Result<(), ServerError> {
-    let root = tree.root()?;
+    let root = tree.root().expect("Merkle tree has no nodes!");
 
     let nodes = tree
         .nodes
@@ -38,10 +37,10 @@ pub async fn add_merkle_tree(
 
     for i in 0..tree.size {
         query = query
-            .bind(block_id)
+            .bind(block_id as i64)
             .bind(root.as_bytes())
-            .bind(nodes[i].as_bytes())
-            .bind(i);
+            .bind(nodes[i])
+            .bind(i as i64);
     }
 
     query
@@ -74,7 +73,7 @@ pub async fn get_merkle_tree(conn: &mut PoolConn, block_id: Id) -> Result<Merkle
         nodes.push(node);
     }
 
-    MerkleTree::from_nodes(nodes)
+    MerkleTree::from_nodes(nodes).map_err(|e| e.into())
 }
 
 pub async fn get_transaction_index_and_block(

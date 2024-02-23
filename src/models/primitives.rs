@@ -1,7 +1,41 @@
+use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Address([u8; 33]);
+
+impl Address {
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut result = [0u8; 33];
+        result.copy_from_slice(bytes);
+        Address(result)
+    }
+}
+
+impl Default for Address {
+    fn default() -> Self {
+        Address([0u8; 33])
+    }
+}
+
+impl Serialize for Address {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.as_hex_string())
+    }
+}
+
+impl Deserialize<'_> for Address {
+    fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Address::from_hex_string(&s))
+    }
+}
 
 pub type Balance = u128;
 pub type Id = u64;
@@ -11,6 +45,22 @@ pub struct Timestamp(u64);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Signature([u8; 64]);
+
+impl Signature {
+    pub fn as_hex_string(&self) -> String {
+        hex::encode(&self.0)
+    }
+
+    pub fn from_hex_string(s: &str) -> Self {
+        let bytes = hex::decode(s).expect("Failed to decode hex string");
+        if bytes.len() != 64 {
+            panic!("Invalid signature length");
+        }
+        let mut result = [0u8; 64];
+        result.copy_from_slice(&bytes);
+        Signature(result)
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct H256([u8; 32]);
@@ -30,6 +80,16 @@ impl H256 {
         H256(result)
     }
 
+    pub fn from_hex_string(s: &str) -> Self {
+        let bytes = hex::decode(s).expect("Failed to decode hex string");
+        if bytes.len() != 32 {
+            panic!("Invalid hash length");
+        }
+        let mut result = [0u8; 32];
+        result.copy_from_slice(&bytes);
+        H256(result)
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
@@ -44,6 +104,31 @@ impl H256 {
 
     pub fn as_hex_string(&self) -> String {
         hex::encode(&self.0)
+    }
+}
+
+impl Default for H256 {
+    fn default() -> Self {
+        H256::zero()
+    }
+}
+
+impl Serialize for H256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.as_hex_string())
+    }
+}
+
+impl Deserialize<'_> for H256 {
+    fn deserialize<'de, D>(deserializer: D) -> Result<H256, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(H256::from_slice(&hex::decode(s).unwrap()))
     }
 }
 

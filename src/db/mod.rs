@@ -4,7 +4,6 @@ pub mod merkle_tree;
 pub mod transactions;
 
 use crate::models::error::ServerError;
-use serde::{Deserialize, Serialize};
 use sqlx;
 use sqlx::postgres::PgPool;
 use std::env;

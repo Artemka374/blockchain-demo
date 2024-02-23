@@ -24,7 +24,7 @@ Different data produces different hashes, but the same data always produces the 
 * **Signature** - a 65-bytes number that is used to verify that a transaction was signed by the owner of the account.
 
 ## Cryptography
-* Project uses secp256k1 elliptic curve for cryptography. It is the same curve that is used in Bitcoin and Ethereum blockchains. Public and private keys are generated over this curve.
+* Project uses `secp256k1` elliptic curve for cryptography. It is the same curve that is used in Bitcoin and Ethereum blockchains. Public and private keys are generated over this curve.
 * For signing and verifying signatures projects uses ECDSA algorithm. It is a standard algorithm for signing and verifying messages over elliptic curves.
 * For hashing project uses `blake2` algorithms.
 

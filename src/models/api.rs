@@ -1,8 +1,7 @@
-use crate::models::merkle_tree::MerkleNode;
 use crate::models::primitives::Address;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeMode {
     #[default]
@@ -61,5 +60,5 @@ pub struct ApiVerifySig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiVerifyProof {
     pub tx_hash: String,
-    pub proof: Vec<[u8; 33]>,
+    pub proof: Vec<String>,
 }

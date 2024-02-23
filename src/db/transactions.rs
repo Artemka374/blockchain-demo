@@ -1,7 +1,7 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
-use crate::models::primitives::{Address, Id, Signature, H256};
-use crate::models::Transaction;
+use crate::models::primitives::{Address, H256};
+use crate::models::{Transaction, TransactionStatus};
 
 pub async fn add_pending_transaction(
     conn: &mut PoolConn,
@@ -89,7 +89,7 @@ pub async fn get_pending_transactions(
 ) -> Result<Vec<Transaction>, ServerError> {
     let txs: Vec<_> = sqlx::query!(
         r#"
-        SELECT hash, from, to, amount, sig, nonce
+        SELECT hash, from, to, amount, nonce
         FROM transactions
         WHERE status = 'pending'
         ORDER BY created_at
@@ -104,11 +104,12 @@ pub async fn get_pending_transactions(
     let txs = txs
         .into_iter()
         .map(|tx| Transaction {
-            from: Address::from_slice(&tx.from).unwrap(),
-            to: Address::from_slice(&tx.to).unwrap(),
+            from: Address::from_bytes(&tx.from),
+            to: Address::from_bytes(&tx.to),
             amount: tx.amount,
+            block_id: None,
             nonce: tx.nonce,
-            sig: Signature::from_slice(&tx.sig).unwrap(),
+            status: TransactionStatus::Pending,
         })
         .collect();
 

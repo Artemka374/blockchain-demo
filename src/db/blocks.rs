@@ -1,7 +1,7 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
 use crate::models::primitives::{Address, Id, H256};
-use crate::models::{Block, Transaction};
+use crate::models::Block;
 
 pub async fn add_block(
     conn: &mut PoolConn,

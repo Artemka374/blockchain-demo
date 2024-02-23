@@ -1,8 +1,9 @@
 use crate::crypto::hash::hash_message;
 use crate::crypto::sig::verify_signature;
 use crate::models::error::CryptoError;
-use crate::models::merkle_tree::MerkleTree;
 use crate::models::primitives::{Address, Balance, Id, Signature, H256};
+use sqlx::postgres::PgRow;
+use sqlx::Row;
 
 pub mod api;
 pub mod config;
@@ -50,11 +51,20 @@ impl Block {
     }
 }
 
-#[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
+#[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize)]
 pub enum TransactionStatus {
     #[default]
     Pending,
     Confirmed,
+}
+
+impl sqlx::FromRow<'_, PgRow> for TransactionStatus {
+    fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
+        Ok(match row.try_get::<&str, _>("status") {
+            Ok(s) => s.into(),
+            Err(_) => TransactionStatus::Pending,
+        })
+    }
 }
 
 impl TransactionStatus {
@@ -81,7 +91,7 @@ pub struct Transaction {
     pub from: Address,
     pub to: Address,
     pub amount: Balance,
-    pub block_id: Id,
+    pub block_id: Option<Id>,
     pub nonce: u64,
     pub status: TransactionStatus,
 }
