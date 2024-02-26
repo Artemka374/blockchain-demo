@@ -1,9 +1,10 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
 use crate::models::primitives::{Address, Balance};
+use std::ops::Deref;
 
-pub async fn get_balance(conn: &mut PoolConn, address: Address) -> Result<u64, ServerError> {
-    ensure_address_exists(conn, address).await?;
+pub async fn get_balance(conn: &mut PoolConn, address: Address) -> Result<Balance, ServerError> {
+    ensure_address_exists(&mut *conn, address).await?;
 
     let balance = sqlx::query!(
         r#"
@@ -13,12 +14,13 @@ pub async fn get_balance(conn: &mut PoolConn, address: Address) -> Result<u64, S
         "#,
         address.as_bytes()
     )
-    .fetch_one(conn)
+    .fetch_one(conn.deref())
     .await
     .map_err(|e| ServerError::new(500, format!("Failed getting balance: {}", e)))?
+    .balance
     .unwrap_or(0);
 
-    Ok(balance.result)
+    Ok(balance as Balance)
 }
 
 pub async fn get_nonce(conn: &mut PoolConn, address: Address) -> Result<u64, ServerError> {
@@ -33,10 +35,9 @@ pub async fn get_nonce(conn: &mut PoolConn, address: Address) -> Result<u64, Ser
     )
     .fetch_one(conn)
     .await
-    .map_err(|e| ServerError::new(500, format!("Failed getting nonce: {}", e)))?
-    .unwrap_or(0);
+    .map_err(|e| ServerError::new(500, format!("Failed getting nonce: {}", e)))?;
 
-    Ok(nonce.result)
+    Ok(nonce.nonce.unwrap_or(0) as u64)
 }
 
 pub async fn ensure_address_exists(
@@ -51,7 +52,7 @@ pub async fn ensure_address_exists(
         "#,
         address.as_bytes()
     )
-    .execute(conn)
+    .execute(&*conn)
     .await
     .map_err(|e| ServerError::new(500, format!("Failed ensuring address exists: {}", e)))?;
     Ok(())
@@ -69,7 +70,7 @@ pub async fn update_balance(
         SET balance = $1
         WHERE address = $2
         "#,
-        amount,
+        amount as i64,
         address.as_bytes()
     )
     .execute(conn)
@@ -90,7 +91,7 @@ pub async fn update_nonce(
         SET nonce = $1
         WHERE address = $2
         "#,
-        nonce,
+        nonce as i64,
         address.as_bytes()
     )
     .execute(conn)

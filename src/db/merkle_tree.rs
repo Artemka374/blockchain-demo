@@ -26,13 +26,13 @@ pub async fn add_merkle_node(
 ) -> Result<(), ServerError> {
     let query = sqlx::query!(
         r#"
-        INSERT INTO merkle_trees (block_id, root, node, index)
+        INSERT INTO merkle_nodes (block_id, root, node, index)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (block_id, root, index) DO NOTHING
         "#,
         block_id as i64,
         root.as_bytes(),
-        node.as_bvtes(),
+        &node.as_bvtes(),
         index as i64
     )
     .execute(conn)
@@ -45,24 +45,27 @@ pub async fn add_merkle_node(
 pub async fn get_merkle_tree(conn: &mut PoolConn, block_id: Id) -> Result<MerkleTree, ServerError> {
     let mut nodes = Vec::new();
 
-    let mut rows = sqlx::query!(
+    let mut rows: Vec<_> = sqlx::query!(
         r#"
         SELECT node, index
-        FROM merkle_trees
+        FROM merkle_nodes
         WHERE block_id = $1
         ORDER BY index
         "#,
-        block_id
+        block_id as i64
     )
-    .fetch(conn);
+    .fetch_all(conn)
+    .await
+    .map_err(|e| ServerError::new(500, format!("Failed getting transaction index: {}", e)))?;
 
-    while let Some(row) = rows.next().await {
-        let row =
-            row.map_err(|e| ServerError::new(500, format!("Failed getting merkle tree: {}", e)))?;
-
-        let node = MerkleNode::from_bytes(row.node)?;
-        nodes.push(node);
-    }
+    let nodes = rows
+        .into_iter()
+        .map(|row| {
+            let mut buffer = [0u8; 33];
+            buffer.copy_from_slice(&row.node.unwrap());
+            MerkleNode::from_bytes(buffer).expect("Failed deserializing merkle node from database")
+        })
+        .collect::<Vec<_>>();
 
     MerkleTree::from_nodes(nodes).map_err(|e| e.into())
 }
@@ -73,7 +76,7 @@ pub async fn get_transaction_index_and_block(
 ) -> Result<Option<(Id, Id)>, ServerError> {
     let result = sqlx::query!(
         r#"
-        SELECT index, block_id
+        SELECT index_in_block, block_id
         FROM transactions
         WHERE hash = $1
         "#,
@@ -83,5 +86,12 @@ pub async fn get_transaction_index_and_block(
     .await
     .map_err(|e| ServerError::new(500, format!("Failed getting transaction index: {}", e)))?;
 
-    Ok((result.index, result.block_id))
+    if result.block_id.is_some() && result.index_in_block.is_some() {
+        Ok(Some((
+            result.index_in_block.unwrap() as Id,
+            result.block_id.unwrap() as Id,
+        )))
+    } else {
+        Ok(None)
+    }
 }

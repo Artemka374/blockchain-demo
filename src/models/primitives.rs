@@ -174,6 +174,15 @@ impl Timestamp {
     }
 }
 
+impl From<Option<Vec<u8>>> for H256 {
+    fn from(bytes: Option<Vec<u8>>) -> Self {
+        match bytes {
+            Some(bytes) => H256::from_slice(&bytes),
+            None => H256::zero(),
+        }
+    }
+}
+
 impl From<secp256k1::PublicKey> for Address {
     fn from(pubkey: secp256k1::PublicKey) -> Self {
         Address(pubkey.serialize())
@@ -199,5 +208,18 @@ impl Address {
         let mut result = [0u8; 33];
         result.copy_from_slice(&bytes);
         Address(result)
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<Option<Vec<u8>>> for Address {
+    fn from(bytes: Option<Vec<u8>>) -> Self {
+        match bytes {
+            Some(bytes) => Address::from_bytes(&bytes),
+            None => Address::default(),
+        }
     }
 }

@@ -3,7 +3,7 @@ use crate::crypto::sig::verify_signature;
 use crate::models::error::CryptoError;
 use crate::models::primitives::{Address, Balance, Id, Signature, H256};
 use sqlx::postgres::PgRow;
-use sqlx::Row;
+use sqlx::{FromRow, Row};
 
 pub mod api;
 pub mod config;
@@ -86,8 +86,9 @@ impl From<&str> for TransactionStatus {
     }
 }
 
-#[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow)]
+#[derive(Default, Debug, Copy, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Transaction {
+    pub hash: H256,
     pub from: Address,
     pub to: Address,
     pub amount: Balance,

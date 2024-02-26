@@ -6,7 +6,8 @@ CREATE TABLE transactions (
     block_id BIGINT,
     nonce BIGINT,
     status VARCHAR(256) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    index_in_block BIGINT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE blocks (
@@ -16,14 +17,14 @@ CREATE TABLE blocks (
     merkle_root bytea,
     produced_by bytea,
     nonce BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE accounts (
     address bytea,
     balance BIGINT,
     nonce BIGINT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE merkle_nodes (
@@ -31,5 +32,5 @@ CREATE TABLE merkle_nodes (
     root bytea,
     node bytea,
     index BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

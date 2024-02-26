@@ -1,4 +1,5 @@
 use crate::db::{accounts, blocks, transactions, *};
+use crate::models::primitives::H256;
 use crate::models::{
     api::{ApiMint, ApiTransfer, MineInfo, NodeMode},
     error::ServerError,
@@ -7,8 +8,7 @@ use crate::models::{
     TransactionStatus, {Block, Transaction},
 };
 use crate::NodeData;
-use actix_web::{web, FromRequest, HttpResponse};
-use std::sync::Arc;
+use actix_web::{web, HttpResponse};
 
 #[actix_web::post("/add_transaction")]
 pub async fn transfer(
@@ -18,7 +18,8 @@ pub async fn transfer(
     let mut conn = connection(&data.pool).await?;
     let transfer_info = transfer_info.into_inner();
 
-    let tx = Transaction {
+    let mut tx = Transaction {
+        hash: H256::zero(),
         from: transfer_info.from,
         to: transfer_info.to,
         amount: transfer_info.amount,
@@ -28,6 +29,8 @@ pub async fn transfer(
     };
 
     tx.verify_signature(Signature::from_hex_string(&transfer_info.signature))?;
+
+    tx.hash = tx.hash();
 
     transactions::add_pending_transaction(&mut conn, tx).await?;
 
@@ -85,6 +88,7 @@ pub async fn try_mine(
         hash,
         block.parent_hash,
         mine_info.miner,
+        mine_info.nonce,
     )
     .await?;
 
