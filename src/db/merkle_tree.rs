@@ -24,7 +24,7 @@ pub async fn add_merkle_node(
     node: MerkleNode,
     index: usize,
 ) -> Result<(), ServerError> {
-    let query = sqlx::query!(
+    sqlx::query!(
         r#"
         INSERT INTO merkle_nodes (block_id, root, node, index)
         VALUES ($1, $2, $3, $4)
@@ -32,7 +32,7 @@ pub async fn add_merkle_node(
         "#,
         block_id as i64,
         root.as_bytes(),
-        &node.as_bvtes(),
+        &node.as_bvtes()[..],
         index as i64
     )
     .execute(conn)
@@ -43,9 +43,7 @@ pub async fn add_merkle_node(
 }
 
 pub async fn get_merkle_tree(conn: &mut PoolConn, block_id: Id) -> Result<MerkleTree, ServerError> {
-    let mut nodes = Vec::new();
-
-    let mut rows: Vec<_> = sqlx::query!(
+    let rows: Vec<_> = sqlx::query!(
         r#"
         SELECT node, index
         FROM merkle_nodes

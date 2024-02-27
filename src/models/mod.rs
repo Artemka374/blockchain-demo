@@ -3,7 +3,7 @@ use crate::crypto::sig::verify_signature;
 use crate::models::error::CryptoError;
 use crate::models::primitives::{Address, Balance, Id, Signature, H256};
 use sqlx::postgres::PgRow;
-use sqlx::{FromRow, Row};
+use sqlx::Row;
 
 pub mod api;
 pub mod config;

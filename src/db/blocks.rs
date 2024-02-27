@@ -38,14 +38,17 @@ pub async fn get_latest_block(conn: &mut PoolConn) -> Result<(u64, H256), Server
         LIMIT 1
         "#,
     )
-    .fetch_one(conn)
+    .fetch_optional(conn)
     .await
     .map_err(|e| ServerError::new(500, format!("Failed getting latest block id: {}", e)))?;
 
-    Ok((
-        result.id.unwrap() as Id,
-        H256::from_slice(&result.hash.unwrap()),
-    ))
+    match result {
+        Some(block) => Ok((
+            block.id.unwrap() as u64,
+            H256::from_slice(&block.hash.unwrap()),
+        )),
+        None => Ok((0, H256::zero())),
+    }
 }
 
 pub async fn get_block_by_id(

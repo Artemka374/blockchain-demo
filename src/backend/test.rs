@@ -1,9 +1,10 @@
-use crate::models::api::{ApiGenerateSig, ApiVerifyProof, ApiVerifySig, NodeMode};
+use crate::models::api::{ApiGenerateSig, ApiHashMessage, ApiVerifyProof, ApiVerifySig, NodeMode};
 use crate::models::error::ServerError;
 use crate::models::merkle_tree::MerkleProof;
 use crate::models::primitives::{Address, Signature, H256};
 use crate::{crypto, NodeData};
 use actix_web::{web, HttpResponse};
+use std::sync::Mutex;
 
 #[actix_web::get("/get_mode")]
 pub async fn get_mode(node_data: web::Data<NodeData>) -> Result<HttpResponse, ServerError> {
@@ -12,11 +13,12 @@ pub async fn get_mode(node_data: web::Data<NodeData>) -> Result<HttpResponse, Se
 
 #[actix_web::post("/set_mode")]
 pub async fn set_mode(
-    node_data: web::Data<NodeData>,
+    node_data: web::Data<Mutex<NodeData>>,
     mode: web::Json<NodeMode>,
 ) -> Result<HttpResponse, ServerError> {
-    //*node_data.config.node_mode = mode.into_inner();
-    Ok(HttpResponse::Ok().json(node_data.config.node_mode.clone()))
+    let config = &mut node_data.lock().expect("Failed to get node data").config;
+    config.node_mode = mode.into_inner();
+    Ok(HttpResponse::Ok().json(config.node_mode.clone()))
 }
 
 #[actix_web::get("/generate_sig/{address}")]
@@ -75,4 +77,11 @@ pub async fn verify_proof(
     )?;
 
     Ok(HttpResponse::Ok().json(proof.verify(hash)))
+}
+
+#[actix_web::get("/hash_message")]
+pub async fn hash_message(message: web::Json<ApiHashMessage>) -> Result<HttpResponse, ServerError> {
+    let message = message.into_inner().message;
+    let hash = crypto::hash::hash_message(message.as_bytes());
+    Ok(HttpResponse::Ok().json(hash.as_hex_string()))
 }

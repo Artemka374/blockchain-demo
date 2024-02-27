@@ -1,8 +1,11 @@
 extern crate core;
 
+use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use sqlx::PgPool;
+use std::env;
+
 pub mod backend;
 
 use backend::{get, post, test};
@@ -18,15 +21,18 @@ pub struct NodeData {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
+    env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
+    env_logger::init();
 
     let pool = db::init().await.expect("Failed to connect to database");
     let config = models::config::Config::parse();
+    let server_url = config.server_url.clone();
 
     HttpServer::new(move || {
-        let app = App::new().app_data(NodeData {
+        let app = App::new().app_data(Data::new(NodeData {
             pool: pool.clone(),
             config: config.clone(),
-        });
+        }));
 
         // route GET methods
         let app = app
@@ -54,10 +60,11 @@ async fn main() -> std::io::Result<()> {
             .service(test::generate_sig)
             .service(test::verify_sig)
             .service(test::get_pub_key)
-            .service(test::verify_proof);
+            .service(test::verify_proof)
+            .service(test::hash_message);
         app
     })
-    .bind(config.server_url)?
+    .bind(server_url)?
     .run()
     .await
 }

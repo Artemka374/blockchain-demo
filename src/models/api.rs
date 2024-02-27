@@ -62,3 +62,8 @@ pub struct ApiVerifyProof {
     pub tx_hash: String,
     pub proof: Vec<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiHashMessage {
+    pub message: String,
+}

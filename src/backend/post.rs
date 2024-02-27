@@ -9,6 +9,7 @@ use crate::models::{
 };
 use crate::NodeData;
 use actix_web::{web, HttpResponse};
+use std::sync::Mutex;
 
 #[actix_web::post("/add_transaction")]
 pub async fn transfer(
@@ -101,14 +102,16 @@ pub async fn try_mine(
 
 #[actix_web::post("/set_target")]
 pub async fn set_target(
-    data: web::Data<NodeData>,
+    data: web::Data<Mutex<NodeData>>,
     target: String,
 ) -> Result<HttpResponse, ServerError> {
-    //let mut config = Arc::get_mut(&mut data.into_inner()).unwrap().config;
-    //config.target = target;
     let target: u64 = target
         .parse()
         .map_err(|_| ServerError::new(400, "Invalid target".to_string()))?;
+    data.lock()
+        .expect("Failed to access target data")
+        .config
+        .target = target;
     Ok(HttpResponse::Ok().finish())
 }
 

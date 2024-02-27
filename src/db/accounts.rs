@@ -1,10 +1,9 @@
 use crate::db::PoolConn;
 use crate::models::error::ServerError;
 use crate::models::primitives::{Address, Balance};
-use std::ops::Deref;
 
 pub async fn get_balance(conn: &mut PoolConn, address: Address) -> Result<Balance, ServerError> {
-    ensure_address_exists(&mut *conn, address).await?;
+    ensure_address_exists(conn, address).await?;
 
     let balance = sqlx::query!(
         r#"
@@ -14,7 +13,7 @@ pub async fn get_balance(conn: &mut PoolConn, address: Address) -> Result<Balanc
         "#,
         address.as_bytes()
     )
-    .fetch_one(conn.deref())
+    .fetch_one(conn)
     .await
     .map_err(|e| ServerError::new(500, format!("Failed getting balance: {}", e)))?
     .balance
@@ -44,18 +43,35 @@ pub async fn ensure_address_exists(
     conn: &mut PoolConn,
     address: Address,
 ) -> Result<(), ServerError> {
-    let _ = sqlx::query!(
+    if !account_exists(conn, address).await? {
+        let _ = sqlx::query!(
+            r#"
+            INSERT INTO accounts (address, balance, nonce)
+            VALUES ($1, 0, 0)
+            "#,
+            address.as_bytes()
+        )
+        .execute(conn)
+        .await
+        .map_err(|e| ServerError::new(500, format!("Failed ensuring address exists: {}", e)))?;
+    }
+    Ok(())
+}
+
+async fn account_exists(conn: &mut PoolConn, address: Address) -> Result<bool, ServerError> {
+    let result = sqlx::query!(
         r#"
-        INSERT INTO accounts (address, balance, nonce)
-        VALUES ($1, 0, 0)
-        ON CONFLICT (address) DO NOTHING
+        SELECT *
+        FROM accounts
+        WHERE address = $1
         "#,
         address.as_bytes()
     )
-    .execute(&*conn)
+    .fetch_optional(conn)
     .await
     .map_err(|e| ServerError::new(500, format!("Failed ensuring address exists: {}", e)))?;
-    Ok(())
+
+    Ok(result.is_some())
 }
 
 pub async fn update_balance(

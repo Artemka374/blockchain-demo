@@ -203,7 +203,7 @@ impl Address {
     pub fn from_hex_string(s: &str) -> Self {
         let bytes = hex::decode(s).expect("Failed to decode hex string");
         if bytes.len() != 33 {
-            panic!("Invalid address length");
+            panic!("Invalid address length {}", bytes.len());
         }
         let mut result = [0u8; 33];
         result.copy_from_slice(&bytes);
